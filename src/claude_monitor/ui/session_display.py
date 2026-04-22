@@ -3,14 +3,19 @@
 Handles formatting of active session screens and session data display.
 """
 
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
 
 import pytz
 
-from claude_monitor.core.fun_facts import format_wh, headline_comparison
-from claude_monitor.core.grid_intensity import wh_to_gco2
+from claude_monitor.core.fun_facts import (
+    best_comparisons,
+    format_wh,
+    headline_comparison,
+)
+from claude_monitor.core.grid_intensity import get_intensity, wh_to_gco2
 from claude_monitor.ui.components import CostIndicator, VelocityIndicator
 from claude_monitor.ui.layouts import HeaderManager
 from claude_monitor.ui.progress_bars import (
@@ -64,6 +69,88 @@ class SessionDisplayComponent:
         self.token_progress = TokenProgressBar()
         self.time_progress = TimeProgressBar()
         self.model_usage = ModelUsageBar()
+
+    # Pulse frames for the energy emoji. Cycled based on wall time so the
+    # icon animates across the Rich Live refresh ticks without needing
+    # explicit tick counters.
+    _PULSE_FRAMES = ["⚡", "✨", "💫", "⚡", "🔆", "✨"]
+
+    def _pulse_icon(self) -> str:
+        """Return the current pulse frame for the energy icon."""
+        return self._PULSE_FRAMES[
+            int(time.time() / 0.5) % len(self._PULSE_FRAMES)
+        ]
+
+    def _render_energy_block(
+        self, energy_wh: float, country: str, width: int = 60
+    ) -> list[str]:
+        """Render an Energy Impact section with rotating fun facts.
+
+        Layout::
+
+            ─────── ⚡ ENERGY IMPACT · US grid, 380 gCO2/kWh ────────
+
+              Session:  465 Wh            CO2:  177 g
+
+              ≈ 5.8 Netflix hours streamed
+              ≈ 13 cups of tea boiled   ·   27 iPhone charges
+
+              ⓘ How is this calculated?  doc/METHODOLOGY.md
+            ─────────────────────────────────────────────────────────
+
+        Uses horizontal dividers only, which sidesteps the emoji/markup
+        width math that breaks aligned vertical borders in Rich.
+        """
+        icon = self._pulse_icon()
+        intensity = get_intensity(country)
+        co2_g = wh_to_gco2(energy_wh, country)
+        energy_str = format_wh(energy_wh)
+
+        # Rotate primary fun fact every ~3s so the headline feels alive.
+        comparisons = best_comparisons(energy_wh, count=5)
+        if comparisons:
+            idx = int(time.time() / 3) % len(comparisons)
+            headline = comparisons[idx]
+            remaining = [c for i, c in enumerate(comparisons) if i != idx]
+        else:
+            headline = headline_comparison(energy_wh)
+            remaining = []
+
+        # Compact header: `──── ⚡ ENERGY IMPACT · US grid, 380 gCO2/kWh ────`
+        title_text = f" {icon} ENERGY IMPACT · {country} grid, {intensity:.0f} gCO2/kWh "
+        # approximate visible length; emoji counts as 2
+        approx_len = len(title_text) + 1
+        dash_left = 4
+        dash_right = max(3, width - dash_left - approx_len)
+        header = (
+            f"[separator]{'─' * dash_left}[/]"
+            f"[bold]{title_text}[/bold]"
+            f"[separator]{'─' * dash_right}[/]"
+        )
+        footer = f"[separator]{'─' * width}[/]"
+
+        lines: list[str] = []
+        lines.append(header)
+        lines.append(
+            f"  [value]Session:[/]  [bold warning]{energy_str}[/]"
+            f"{' ' * max(2, 14 - len(energy_str))}"
+            f"[value]CO2:[/]  [bold warning]{co2_g:,.1f} g[/]"
+        )
+        lines.append("")
+        lines.append(f"  [info]≈ {headline}[/]")
+        if remaining:
+            # Show up to two extras, joined by · — truncate if too long
+            extras = "   ·   ".join(remaining[:2])
+            if len(extras) > width - 4:
+                extras = remaining[0]
+            lines.append(f"  [dim]≈ {extras}[/]")
+        lines.append("")
+        lines.append(
+            "  [dim]ⓘ How is this calculated?  "
+            "[cyan underline]doc/METHODOLOGY.md[/cyan underline][/dim]"
+        )
+        lines.append(footer)
+        return lines
 
     def _render_wide_progress_bar(self, percentage: float) -> str:
         """Render a wide progress bar (50 chars) using centralized progress bar logic.
@@ -275,15 +362,9 @@ class SessionDisplayComponent:
             )
 
             if session_energy_wh > 0:
-                energy_str = format_wh(session_energy_wh)
-                co2_g = wh_to_gco2(session_energy_wh, country)
-                fun = headline_comparison(session_energy_wh)
-                screen_buffer.append(
-                    f"⚡ [value]Session Energy:[/]         [warning]{energy_str}[/] "
-                    f"[dim]({co2_g:.1f} g CO2, {country})[/]"
-                )
-                screen_buffer.append(
-                    f"🔋 [value]That's about:[/]           [info]{fun}[/]"
+                screen_buffer.append("")
+                screen_buffer.extend(
+                    self._render_energy_block(session_energy_wh, country, width=62)
                 )
         else:
             cost_display = CostIndicator.render(session_cost)
@@ -298,14 +379,10 @@ class SessionDisplayComponent:
                 f"💲 [value]Cost Rate:[/]      {cost_per_min_display} [dim]$/min[/]"
             )
             if session_energy_wh > 0:
-                energy_str = format_wh(session_energy_wh)
-                co2_g = wh_to_gco2(session_energy_wh, country)
-                fun = headline_comparison(session_energy_wh)
-                screen_buffer.append(
-                    f"⚡ [value]Energy:[/]         [warning]{energy_str}[/] "
-                    f"[dim]({co2_g:.1f} g CO2, {country})[/]"
+                screen_buffer.append("")
+                screen_buffer.extend(
+                    self._render_energy_block(session_energy_wh, country, width=62)
                 )
-                screen_buffer.append(f"🔋 [value]That's about:[/]   [info]{fun}[/]")
             screen_buffer.append("")
 
             token_bar = self.token_progress.render(usage_percentage)

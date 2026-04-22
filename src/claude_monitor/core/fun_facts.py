@@ -19,18 +19,19 @@ class EnergyReference:
 
 
 REFERENCES: List[EnergyReference] = [
-    # (name, Wh/unit, singular, plural, emoji)
-    EnergyReference("Google searches", 0.3, "search", "searches", ""),
-    EnergyReference("Microwave seconds at 1000W", 0.28, "second", "seconds", ""),
-    EnergyReference("LED bulb minutes (10W)", 0.17, "minute", "minutes", ""),
-    EnergyReference("Phone chargings (iPhone)", 15.0, "charge", "charges", ""),
-    EnergyReference("Laptop hours (50W)", 50.0, "hour", "hours", ""),
-    EnergyReference("Cups of tea boiled", 35.0, "cup", "cups", ""),
-    EnergyReference("Ceiling fan hours (75W)", 75.0, "hour", "hours", ""),
-    EnergyReference("Netflix hours streamed", 80.0, "hour", "hours", ""),
-    EnergyReference("Toast slices", 30.0, "slice", "slices", ""),
-    EnergyReference("EV miles (Tesla M3, 250 Wh/mi)", 250.0, "mile", "miles", ""),
-    EnergyReference("Home kWh (US avg 30 kWh/day)", 1000.0, "kWh", "kWh", ""),
+    # Each reference is a natural phrase template: "{N} {name}".
+    # Wh/unit sources and derivations are documented in METHODOLOGY.md.
+    EnergyReference("Google searches", 0.3, "search", "searches"),
+    EnergyReference("seconds of microwave", 0.28, "second", "seconds"),
+    EnergyReference("minutes of LED light", 0.17, "minute", "minutes"),
+    EnergyReference("iPhone charges", 15.0, "charge", "charges"),
+    EnergyReference("hours of laptop use", 50.0, "hour", "hours"),
+    EnergyReference("cups of tea boiled", 35.0, "cup", "cups"),
+    EnergyReference("hours of ceiling fan", 75.0, "hour", "hours"),
+    EnergyReference("hours of Netflix", 80.0, "hour", "hours"),
+    EnergyReference("slices of toast", 30.0, "slice", "slices"),
+    EnergyReference("miles of EV driving", 250.0, "mile", "miles"),
+    EnergyReference("days of home use (US avg)", 30000.0, "day", "days"),
 ]
 
 
@@ -69,8 +70,7 @@ def _format_comparison(ref: EnergyReference, n: float) -> str:
         num_str = f"{n:.1f}"
     else:
         num_str = f"{n:.2f}"
-    unit = ref.unit_singular if abs(n - 1.0) < 0.05 else ref.unit_plural
-    return f"{num_str} {unit} — {ref.name}"
+    return f"{num_str} {ref.name}"
 
 
 def headline_comparison(wh: float) -> str:
