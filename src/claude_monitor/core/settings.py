@@ -152,6 +152,11 @@ class Settings(BaseSettings):
         description="Show the legacy USD cost column in daily/monthly tables (hidden by default; this is an energy tool).",
     )
 
+    explain: bool = Field(
+        default=False,
+        description="Print the full energy-derivation breakdown for the most recent session and exit.",
+    )
+
     refresh_rate: int = Field(
         default=10, ge=1, le=60, description="Refresh rate in seconds"
     )
@@ -358,6 +363,7 @@ class Settings(BaseSettings):
         args.custom_limit_tokens = self.custom_limit_tokens
         args.country = self.country
         args.show_cost = self.show_cost
+        args.explain = self.explain
         args.time_format = self.time_format
         args.log_level = self.log_level
         args.log_file = str(self.log_file) if self.log_file else None

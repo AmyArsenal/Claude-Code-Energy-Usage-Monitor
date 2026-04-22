@@ -145,9 +145,16 @@ class SessionDisplayComponent:
                 extras = remaining[0]
             lines.append(f"  [dim]≈ {extras}[/]")
         lines.append("")
+        # OSC-8 hyperlinks work in iTerm2, Warp, kitty, Ghostty, modern
+        # VS Code terminal. Plain-text terminals just show the URL.
+        method_url = (
+            "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor"
+            "/blob/main/doc/METHODOLOGY.md"
+        )
         lines.append(
             "  [dim]ⓘ How is this calculated?  "
-            "[cyan underline]doc/METHODOLOGY.md[/cyan underline][/dim]"
+            f"[cyan underline][link={method_url}]{method_url}[/link]"
+            f"[/cyan underline]  ·  or run [bold]--explain[/bold][/dim]"
         )
         lines.append(footer)
         return lines

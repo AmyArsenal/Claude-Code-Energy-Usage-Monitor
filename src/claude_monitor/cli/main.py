@@ -78,6 +78,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"claude-monitor {__version__}")
         return 0
 
+    if "--explain" in argv:
+        # Short-circuit: print the derivation and exit, skipping the
+        # full pydantic-settings + live-display stack entirely.
+        from claude_monitor.core.explain import print_explain
+
+        country = "US"
+        if "--country" in argv:
+            try:
+                country = argv[argv.index("--country") + 1]
+            except IndexError:
+                pass
+        print_explain(country=country)
+        return 0
+
     try:
         settings = Settings.load_with_last_used(argv)
 
