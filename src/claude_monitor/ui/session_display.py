@@ -82,24 +82,17 @@ class SessionDisplayComponent:
         ]
 
     def _render_energy_block(
-        self, energy_wh: float, country: str, width: int = 60
+        self, energy_wh: float, country: str, width: int = 62
     ) -> list[str]:
         """Render an Energy Impact section with rotating fun facts.
 
-        Layout::
+        Renders with its own heavy-line borders (━) so the block reads
+        as visually distinct from the light-line (─) separators used
+        inside the Cost/Token/Messages section above.
 
-            ─────── ⚡ ENERGY IMPACT · US grid, 380 gCO2/kWh ────────
-
-              Session:  465 Wh            CO2:  177 g
-
-              ≈ 5.8 Netflix hours streamed
-              ≈ 13 cups of tea boiled   ·   27 iPhone charges
-
-              ⓘ How is this calculated?  doc/METHODOLOGY.md
-            ─────────────────────────────────────────────────────────
-
-        Uses horizontal dividers only, which sidesteps the emoji/markup
-        width math that breaks aligned vertical borders in Rich.
+        Colors are hard-coded (bold bright_white for numbers) rather
+        than theme-token-driven, so readability holds on any terminal
+        theme regardless of the monitor's background auto-detection.
         """
         icon = self._pulse_icon()
         intensity = get_intensity(country)
@@ -116,45 +109,48 @@ class SessionDisplayComponent:
             headline = headline_comparison(energy_wh)
             remaining = []
 
-        # Compact header: `──── ⚡ ENERGY IMPACT · US grid, 380 gCO2/kWh ────`
-        title_text = f" {icon} ENERGY IMPACT · {country} grid, {intensity:.0f} gCO2/kWh "
-        # approximate visible length; emoji counts as 2
+        # Header uses heavy-line (━) to stand apart from the light-line
+        # (─) separators used elsewhere in the screen.
+        title_text = (
+            f" {icon} ENERGY IMPACT · {country} grid, {intensity:.0f} gCO2/kWh "
+        )
         approx_len = len(title_text) + 1
         dash_left = 4
         dash_right = max(3, width - dash_left - approx_len)
         header = (
-            f"[separator]{'─' * dash_left}[/]"
-            f"[bold]{title_text}[/bold]"
-            f"[separator]{'─' * dash_right}[/]"
+            f"[bright_cyan]{'━' * dash_left}[/]"
+            f"[bold bright_white]{title_text}[/bold bright_white]"
+            f"[bright_cyan]{'━' * dash_right}[/]"
         )
-        footer = f"[separator]{'─' * width}[/]"
+        footer = f"[bright_cyan]{'━' * width}[/]"
 
-        lines: list[str] = []
-        lines.append(header)
-        lines.append(
-            f"  [value]Session:[/]  [bold warning]{energy_str}[/]"
-            f"{' ' * max(2, 14 - len(energy_str))}"
-            f"[value]CO2:[/]  [bold warning]{co2_g:,.1f} g[/]"
-        )
-        lines.append("")
-        lines.append(f"  [info]≈ {headline}[/]")
-        if remaining:
-            # Show up to two extras, joined by · — truncate if too long
-            extras = "   ·   ".join(remaining[:2])
-            if len(extras) > width - 4:
-                extras = remaining[0]
-            lines.append(f"  [dim]≈ {extras}[/]")
-        lines.append("")
-        # OSC-8 hyperlinks work in iTerm2, Warp, kitty, Ghostty, modern
-        # VS Code terminal. Plain-text terminals just show the URL.
         method_url = (
             "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor"
             "/blob/main/doc/METHODOLOGY.md"
         )
+
+        lines: list[str] = []
+        lines.append(header)
         lines.append(
-            "  [dim]ⓘ How is this calculated?  "
-            f"[cyan underline][link={method_url}]{method_url}[/link]"
-            f"[/cyan underline]  ·  or run [bold]--explain[/bold][/dim]"
+            f"  [bright_white]Session:[/]  [bold bright_yellow]{energy_str}[/]"
+            f"{' ' * max(2, 14 - len(energy_str))}"
+            f"[bright_white]CO2:[/]  [bold bright_yellow]{co2_g:,.1f} g[/]"
+        )
+        lines.append("")
+        lines.append(f"  [bright_white]≈ {headline}[/]")
+        if remaining:
+            extras = "   ·   ".join(remaining[:2])
+            if len(extras) > width - 4:
+                extras = remaining[0]
+            lines.append(f"  [grey70]≈ {extras}[/]")
+        lines.append("")
+        # OSC-8 hyperlink: clickable anchor text with the full URL as the
+        # link target. Works in iTerm2 / Warp / kitty / Ghostty / VS Code
+        # integrated terminal. Plain terminals show the short anchor.
+        lines.append(
+            "  [grey70]ⓘ How is this calculated?[/]  "
+            f"[bright_cyan underline][link={method_url}]"
+            "github.com/.../METHODOLOGY.md[/link][/]"
         )
         lines.append(footer)
         return lines
@@ -369,6 +365,10 @@ class SessionDisplayComponent:
             )
 
             if session_energy_wh > 0:
+                # Hard visual break between the cost/rate lines and the
+                # ENERGY IMPACT block so the two sections read as
+                # visually distinct.
+                screen_buffer.append("")
                 screen_buffer.append("")
                 screen_buffer.extend(
                     self._render_energy_block(session_energy_wh, country, width=62)
@@ -386,6 +386,7 @@ class SessionDisplayComponent:
                 f"💲 [value]Cost Rate:[/]      {cost_per_min_display} [dim]$/min[/]"
             )
             if session_energy_wh > 0:
+                screen_buffer.append("")
                 screen_buffer.append("")
                 screen_buffer.extend(
                     self._render_energy_block(session_energy_wh, country, width=62)
