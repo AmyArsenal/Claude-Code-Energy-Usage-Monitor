@@ -16,6 +16,7 @@ from claude_monitor.core.data_processors import (
     TimestampProcessor,
     TokenExtractor,
 )
+from claude_monitor.core.energy import EnergyCalculator
 from claude_monitor.core.models import CostMode, UsageEntry
 from claude_monitor.core.pricing import PricingCalculator
 from claude_monitor.error_handling import report_file_error
@@ -49,6 +50,7 @@ def load_usage_entries(
     data_path = Path(data_path if data_path else "~/.claude/projects").expanduser()
     timezone_handler = TimezoneHandler()
     pricing_calculator = PricingCalculator()
+    energy_calculator = EnergyCalculator()
 
     cutoff_time = None
     if hours_back:
@@ -72,6 +74,7 @@ def load_usage_entries(
             include_raw,
             timezone_handler,
             pricing_calculator,
+            energy_calculator,
         )
         all_entries.extend(entries)
         if include_raw and raw_data:
@@ -130,6 +133,7 @@ def _process_single_file(
     include_raw: bool,
     timezone_handler: TimezoneHandler,
     pricing_calculator: PricingCalculator,
+    energy_calculator: EnergyCalculator,
 ) -> Tuple[List[UsageEntry], Optional[List[Dict[str, Any]]]]:
     """Process a single JSONL file."""
     entries: List[UsageEntry] = []
@@ -157,7 +161,11 @@ def _process_single_file(
                         continue
 
                     entry = _map_to_usage_entry(
-                        data, mode, timezone_handler, pricing_calculator
+                        data,
+                        mode,
+                        timezone_handler,
+                        pricing_calculator,
+                        energy_calculator,
                     )
                     if entry:
                         entries_mapped += 1
@@ -232,8 +240,9 @@ def _map_to_usage_entry(
     mode: CostMode,
     timezone_handler: TimezoneHandler,
     pricing_calculator: PricingCalculator,
+    energy_calculator: Optional[EnergyCalculator] = None,
 ) -> Optional[UsageEntry]:
-    """Map raw data to UsageEntry with proper cost calculation."""
+    """Map raw data to UsageEntry with cost and energy calculation."""
     try:
         timestamp_processor = TimestampProcessor(timezone_handler)
         timestamp = timestamp_processor.parse_timestamp(data.get("timestamp", ""))
@@ -255,6 +264,11 @@ def _map_to_usage_entry(
             FIELD_COST_USD: data.get("cost") or data.get(FIELD_COST_USD),
         }
         cost_usd = pricing_calculator.calculate_cost_for_entry(entry_data, mode)
+        energy_wh = (
+            energy_calculator.calculate_energy_for_entry(entry_data, mode)
+            if energy_calculator
+            else 0.0
+        )
 
         message = data.get("message", {})
         message_id = data.get("message_id") or message.get("id") or ""
@@ -267,6 +281,7 @@ def _map_to_usage_entry(
             cache_creation_tokens=token_data.get("cache_creation_tokens", 0),
             cache_read_tokens=token_data.get("cache_read_tokens", 0),
             cost_usd=cost_usd,
+            energy_wh=energy_wh,
             model=model,
             message_id=message_id,
             request_id=request_id,
@@ -286,16 +301,24 @@ class UsageEntryMapper:
     """
 
     def __init__(
-        self, pricing_calculator: PricingCalculator, timezone_handler: TimezoneHandler
+        self,
+        pricing_calculator: PricingCalculator,
+        timezone_handler: TimezoneHandler,
+        energy_calculator: Optional[EnergyCalculator] = None,
     ):
         """Initialize with required components."""
         self.pricing_calculator = pricing_calculator
         self.timezone_handler = timezone_handler
+        self.energy_calculator = energy_calculator or EnergyCalculator()
 
     def map(self, data: Dict[str, Any], mode: CostMode) -> Optional[UsageEntry]:
         """Map raw data to UsageEntry - compatibility interface."""
         return _map_to_usage_entry(
-            data, mode, self.timezone_handler, self.pricing_calculator
+            data,
+            mode,
+            self.timezone_handler,
+            self.pricing_calculator,
+            self.energy_calculator,
         )
 
     def _has_valid_tokens(self, tokens: Dict[str, int]) -> bool:

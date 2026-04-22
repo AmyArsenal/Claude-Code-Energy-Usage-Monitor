@@ -54,6 +54,7 @@ class DisplayController:
         return {
             "tokens_used": active_block.get("totalTokens", 0),
             "session_cost": active_block.get("costUSD", 0.0),
+            "session_energy_wh": active_block.get("energyWh", 0.0),
             "raw_per_model_stats": active_block.get("perModelStats", {}),
             "sent_messages": active_block.get("sentMessagesCount", 0),
             "entries": active_block.get("entries", []),
@@ -379,6 +380,8 @@ class DisplayController:
             "total_session_minutes": time_data["total_session_minutes"],
             "burn_rate": burn_rate,
             "session_cost": session_data["session_cost"],
+            "session_energy_wh": session_data["session_energy_wh"],
+            "country": getattr(args, "country", "US"),
             "per_model_stats": session_data["raw_per_model_stats"],
             "model_distribution": model_distribution,
             "sent_messages": session_data["sent_messages"],

@@ -5,18 +5,18 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claude-monitor"
-version = "3.1.0"
-description = "A real-time terminal monitoring tool for Claude Code token usage with advanced analytics and Rich UI"
+name = "claude-energy-monitor"
+version = "0.1.0"
+description = "Estimate the electricity and CO2 footprint of Claude Code sessions, with relatable fun facts. Forked from Claude-Code-Usage-Monitor."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
-authors = [{ name = "Maciek", email = "maciek@roboblog.eu" }]
-maintainers = [{ name = "Maciek", email = "maciek@roboblog.eu" }]
+authors = [{ name = "Amit Agrawal" }]
+maintainers = [{ name = "Amit Agrawal" }]
 keywords = [
-  "ai", "analytics", "claude", "dashboard",
-  "developer-tools", "monitoring", "rich",
-  "terminal", "token", "usage"
+  "ai", "analytics", "claude", "carbon", "co2", "dashboard",
+  "developer-tools", "electricity", "energy", "monitoring",
+  "rich", "sustainability", "terminal", "token", "usage"
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -74,19 +74,18 @@ test = [
 
 
 [project.urls]
-homepage = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor"
-repository = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor.git"
-documentation = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor#readme"
-issues = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor/issues"
-changelog = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor/blob/main/CHANGELOG.md"
-"Release Notes" = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor/releases"
-"Discussions" = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor/discussions"
+homepage = "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor"
+repository = "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor.git"
+documentation = "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor#readme"
+issues = "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor/issues"
+methodology = "https://github.com/AmyArsenal/Claude-Code-Energy-Usage-Monitor/blob/main/doc/METHODOLOGY.md"
+upstream = "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor"
 
 [project.scripts]
+claude-energy-monitor = "claude_monitor.__main__:main"
 claude-monitor = "claude_monitor.__main__:main"
-claude-code-monitor = "claude_monitor.__main__:main"
-cmonitor = "claude_monitor.__main__:main"
-ccmonitor = "claude_monitor.__main__:main"
+cemonitor = "claude_monitor.__main__:main"
+ccem = "claude_monitor.__main__:main"
 ccm = "claude_monitor.__main__:main"
 
 [tool.setuptools.packages.find]

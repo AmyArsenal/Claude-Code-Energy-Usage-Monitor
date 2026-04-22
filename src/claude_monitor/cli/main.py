@@ -393,7 +393,11 @@ def _run_table_view(
         )
 
         # Create table controller
-        controller = TableViewsController(console=console)
+        controller = TableViewsController(
+            console=console,
+            country=getattr(args, "country", "US"),
+            show_cost=getattr(args, "show_cost", False),
+        )
 
         # Get aggregated data
         logger.info(f"Loading {view_mode} usage data...")

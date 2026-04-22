@@ -1,13 +1,55 @@
-# 🎯 Claude Code Usage Monitor
-[![PyPI Version](https://img.shields.io/pypi/v/claude-monitor.svg)](https://pypi.org/project/claude-monitor/)
+# Claude Code Energy Usage Monitor
+
 [![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![codecov](https://codecov.io/gh/Maciek-roboblog/Claude-Code-Usage-Monitor/branch/main/graph/badge.svg)](https://codecov.io/gh/Maciek-roboblog/Claude-Code-Usage-Monitor)
 
-A beautiful real-time terminal monitoring tool for Claude AI token usage with advanced analytics, machine learning-based predictions, and Rich UI. Track your token consumption, burn rate, cost analysis, and get intelligent predictions about session limits.
+Estimate the **electricity** and **CO2 footprint** of your Claude Code
+sessions, with relatable comparisons ("≈ 12 iPhone charges"). Reads the
+same local `~/.claude/projects/**/*.jsonl` files as the upstream cost
+monitor, converts tokens into Wh using a tier-specific coefficient
+table, and multiplies by your country's grid carbon intensity.
 
-![Claude Token Monitor Screenshot](https://raw.githubusercontent.com/Maciek-roboblog/Claude-Code-Usage-Monitor/main/doc/scnew.png)
+Forked from [Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor).
+
+## What it shows
+
+- **Energy** — Wh per session, per day, per month
+- **CO2** — grams of CO2eq using country grid intensity
+- **Fun facts** — relatable equivalents (LED-hours, phone charges, EV miles)
+- **Cost** — preserved from upstream; USD still rendered alongside
+
+## Why the numbers are defensible
+
+The Wh-per-token coefficients are cross-validated against four
+independent sources: bottom-up FLOPs math, MLPerf Inference Power
+benchmarks, Hans Royal's **Compute Heat Rate** framework (SSRN 6322318),
+and first-party disclosures (Google Gemini August 2025; Epoch AI 2025).
+
+See [doc/METHODOLOGY.md](doc/METHODOLOGY.md) for the full derivation,
+citations, and the known ~3x uncertainty band.
+
+## Quick start
+
+```bash
+# install
+uv tool install claude-energy-monitor    # or: pip install claude-energy-monitor
+
+# run
+claude-energy-monitor --view daily --country US
+```
+
+Supported country codes: US, UK, DE, FR, NO, SE, IN, CN, JP, AU, BR, PL,
+RU, ZA, KR, MX, ES, IT, NL, CA (falls back to world average `480 g/kWh`).
+
+---
+
+## Upstream documentation (usage, plans, UI options)
+
+The rest of this README is the upstream guide from
+[Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor),
+preserved so the tool still behaves the same way you know.
+
+
 
 ---
 

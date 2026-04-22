@@ -26,6 +26,7 @@ class UsageEntry:
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
     cost_usd: float = 0.0
+    energy_wh: float = 0.0
     model: str = ""
     message_id: str = ""
     request_id: str = ""
@@ -85,6 +86,7 @@ class SessionBlock:
     models: List[str] = field(default_factory=list)
     sent_messages_count: int = 0
     cost_usd: float = 0.0
+    energy_wh: float = 0.0
     limit_messages: List[Dict[str, Any]] = field(default_factory=list)
     projection_data: Optional[Dict[str, Any]] = None
     burn_rate_snapshot: Optional[BurnRate] = None
@@ -98,6 +100,11 @@ class SessionBlock:
     def total_cost(self) -> float:
         """Get total cost - alias for cost_usd."""
         return self.cost_usd
+
+    @property
+    def total_energy_wh(self) -> float:
+        """Get total energy in Wh - alias for energy_wh."""
+        return self.energy_wh
 
     @property
     def duration_minutes(self) -> float:

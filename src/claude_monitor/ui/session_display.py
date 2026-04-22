@@ -9,6 +9,8 @@ from typing import Any, Optional
 
 import pytz
 
+from claude_monitor.core.fun_facts import format_wh, headline_comparison
+from claude_monitor.core.grid_intensity import wh_to_gco2
 from claude_monitor.ui.components import CostIndicator, VelocityIndicator
 from claude_monitor.ui.layouts import HeaderManager
 from claude_monitor.ui.progress_bars import (
@@ -50,6 +52,8 @@ class SessionDisplayData:
     show_exceed_notification: bool = False
     show_tokens_will_run_out: bool = False
     original_limit: int = 0
+    session_energy_wh: float = 0.0
+    country: str = "US"
 
 
 class SessionDisplayComponent:
@@ -116,6 +120,8 @@ class SessionDisplayComponent:
             total_session_minutes=data.total_session_minutes,
             burn_rate=data.burn_rate,
             session_cost=data.session_cost,
+            session_energy_wh=data.session_energy_wh,
+            country=data.country,
             per_model_stats=data.per_model_stats,
             sent_messages=data.sent_messages,
             entries=data.entries,
@@ -150,6 +156,8 @@ class SessionDisplayComponent:
         show_exceed_notification: bool = False,
         show_tokens_will_run_out: bool = False,
         original_limit: int = 0,
+        session_energy_wh: float = 0.0,
+        country: str = "US",
         **kwargs,
     ) -> list[str]:
         """Format complete active session screen.
@@ -265,6 +273,18 @@ class SessionDisplayComponent:
             screen_buffer.append(
                 f"💲 [value]Cost Rate:[/]              {cost_per_min_display} [dim]$/min[/]"
             )
+
+            if session_energy_wh > 0:
+                energy_str = format_wh(session_energy_wh)
+                co2_g = wh_to_gco2(session_energy_wh, country)
+                fun = headline_comparison(session_energy_wh)
+                screen_buffer.append(
+                    f"⚡ [value]Session Energy:[/]         [warning]{energy_str}[/] "
+                    f"[dim]({co2_g:.1f} g CO2, {country})[/]"
+                )
+                screen_buffer.append(
+                    f"🔋 [value]That's about:[/]           [info]{fun}[/]"
+                )
         else:
             cost_display = CostIndicator.render(session_cost)
             cost_per_min = (
@@ -277,6 +297,15 @@ class SessionDisplayComponent:
             screen_buffer.append(
                 f"💲 [value]Cost Rate:[/]      {cost_per_min_display} [dim]$/min[/]"
             )
+            if session_energy_wh > 0:
+                energy_str = format_wh(session_energy_wh)
+                co2_g = wh_to_gco2(session_energy_wh, country)
+                fun = headline_comparison(session_energy_wh)
+                screen_buffer.append(
+                    f"⚡ [value]Energy:[/]         [warning]{energy_str}[/] "
+                    f"[dim]({co2_g:.1f} g CO2, {country})[/]"
+                )
+                screen_buffer.append(f"🔋 [value]That's about:[/]   [info]{fun}[/]")
             screen_buffer.append("")
 
             token_bar = self.token_progress.render(usage_percentage)

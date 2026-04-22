@@ -194,6 +194,7 @@ def _create_base_block_dict(block: SessionBlock) -> Dict[str, Any]:
         "totalTokens": block.token_counts.input_tokens
         + block.token_counts.output_tokens,
         "costUSD": block.cost_usd,
+        "energyWh": block.energy_wh,
         "models": block.models,
         "perModelStats": block.per_model_stats,
         "sentMessagesCount": block.sent_messages_count,
@@ -213,6 +214,7 @@ def _format_block_entries(entries: List[UsageEntry]) -> List[Dict[str, Any]]:
             "cacheCreationTokens": entry.cache_creation_tokens,
             "cacheReadInputTokens": entry.cache_read_tokens,
             "costUSD": entry.cost_usd,
+            "energyWh": entry.energy_wh,
             "model": entry.model,
             "messageId": entry.message_id,
             "requestId": entry.request_id,

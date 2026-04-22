@@ -14,6 +14,12 @@ from rich.table import Table
 from rich.text import Text
 
 # Removed theme import - using direct styles
+from claude_monitor.core.fun_facts import (
+    best_comparisons,
+    format_wh,
+    headline_comparison,
+)
+from claude_monitor.core.grid_intensity import get_intensity, wh_to_gco2
 from claude_monitor.utils.formatting import format_currency, format_number
 
 logger = logging.getLogger(__name__)
@@ -22,18 +28,28 @@ logger = logging.getLogger(__name__)
 class TableViewsController:
     """Controller for table-based views (daily, monthly)."""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(
+        self,
+        console: Optional[Console] = None,
+        country: str = "US",
+        show_cost: bool = False,
+    ):
         """Initialize the table views controller.
 
         Args:
             console: Optional Console instance for rich output
+            country: Country code for grid carbon intensity lookup
+            show_cost: Whether to include the legacy USD cost column
         """
         self.console = console
+        self.country = country
+        self.show_cost = show_cost
         # Define simple styles
         self.key_style = "cyan"
         self.value_style = "white"
         self.accent_style = "yellow"
         self.success_style = "green"
+        self.energy_style = "bright_green"
         self.warning_style = "yellow"
         self.header_style = "bold cyan"
         self.table_header_style = "bold"
@@ -62,25 +78,28 @@ class TableViewsController:
             show_lines=True,
         )
 
-        # Add columns
+        # Add columns — Cache Create + Cache Read collapsed into a single
+        # "Cache" total to reduce horizontal crowding.
         table.add_column(
             period_column_name, style=self.key_style, width=period_column_width
         )
-        table.add_column("Models", style=self.value_style, width=20)
-        table.add_column("Input", style=self.value_style, justify="right", width=12)
-        table.add_column("Output", style=self.value_style, justify="right", width=12)
+        table.add_column("Models", style=self.value_style, width=18)
+        table.add_column("Input", style=self.value_style, justify="right", width=10)
+        table.add_column("Output", style=self.value_style, justify="right", width=10)
+        table.add_column("Cache", style=self.value_style, justify="right", width=10)
         table.add_column(
-            "Cache Create", style=self.value_style, justify="right", width=12
+            "Total", style=self.accent_style, justify="right", width=12
         )
         table.add_column(
-            "Cache Read", style=self.value_style, justify="right", width=12
+            "Energy", style=self.energy_style, justify="right", width=11
         )
         table.add_column(
-            "Total Tokens", style=self.accent_style, justify="right", width=12
+            "CO2", style=self.energy_style, justify="right", width=9
         )
-        table.add_column(
-            "Cost (USD)", style=self.success_style, justify="right", width=10
-        )
+        if self.show_cost:
+            table.add_column(
+                "Cost", style=self.success_style, justify="right", width=10
+            )
 
         return table
 
@@ -103,16 +122,24 @@ class TableViewsController:
                 + data["cache_read_tokens"]
             )
 
-            table.add_row(
+            energy_wh = data.get("total_energy_wh", 0.0)
+            co2_g = wh_to_gco2(energy_wh, self.country)
+            cache_total = (
+                data["cache_creation_tokens"] + data["cache_read_tokens"]
+            )
+            row = [
                 data[period_key],
                 models_text,
                 format_number(data["input_tokens"]),
                 format_number(data["output_tokens"]),
-                format_number(data["cache_creation_tokens"]),
-                format_number(data["cache_read_tokens"]),
+                format_number(cache_total),
                 format_number(total_tokens),
-                format_currency(data["total_cost"]),
-            )
+                format_wh(energy_wh),
+                f"{co2_g:.1f} g",
+            ]
+            if self.show_cost:
+                row.append(format_currency(data["total_cost"]))
+            table.add_row(*row)
 
     def _add_totals_row(self, table: Table, totals: Dict[str, Any]) -> None:
         """Add totals row to the table.
@@ -121,22 +148,33 @@ class TableViewsController:
             table: Table to add totals to
             totals: Dictionary with total statistics
         """
-        # Add separator
-        table.add_row("", "", "", "", "", "", "", "")
-
         # Add totals row
-        table.add_row(
+        total_energy = totals.get("total_energy_wh", 0.0)
+        total_co2 = wh_to_gco2(total_energy, self.country)
+        total_cache = (
+            totals.get("cache_creation_tokens", 0)
+            + totals.get("cache_read_tokens", 0)
+        )
+
+        # Separator row with the right column count
+        num_cols = 9 if self.show_cost else 8
+        table.add_row(*[""] * num_cols)
+
+        totals_row = [
             Text("Total", style=self.accent_style),
             "",
             Text(format_number(totals["input_tokens"]), style=self.accent_style),
             Text(format_number(totals["output_tokens"]), style=self.accent_style),
-            Text(
-                format_number(totals["cache_creation_tokens"]), style=self.accent_style
-            ),
-            Text(format_number(totals["cache_read_tokens"]), style=self.accent_style),
+            Text(format_number(total_cache), style=self.accent_style),
             Text(format_number(totals["total_tokens"]), style=self.accent_style),
-            Text(format_currency(totals["total_cost"]), style=self.success_style),
-        )
+            Text(format_wh(total_energy), style=self.energy_style),
+            Text(f"{total_co2:.1f} g", style=self.energy_style),
+        ]
+        if self.show_cost:
+            totals_row.append(
+                Text(format_currency(totals["total_cost"]), style=self.success_style)
+            )
+        table.add_row(*totals_row)
 
     def create_daily_table(
         self,
@@ -214,13 +252,30 @@ class TableViewsController:
             Rich Panel object
         """
         # Create summary text
+        total_energy = totals.get("total_energy_wh", 0.0)
+        total_co2 = wh_to_gco2(total_energy, self.country)
+        intensity = get_intensity(self.country)
+
         summary_lines = [
-            f"📊 {view_type.capitalize()} Usage Summary - {period}",
+            f"{view_type.capitalize()} Usage Summary - {period}",
             "",
-            f"Total Tokens: {format_number(totals['total_tokens'])}",
-            f"Total Cost: {format_currency(totals['total_cost'])}",
-            f"Entries: {format_number(totals['entries_count'])}",
+            f"Total Tokens:  {format_number(totals['total_tokens'])}",
+            f"Total Energy:  {format_wh(total_energy)}",
+            f"Total CO2:     {total_co2:.1f} g  "
+            f"(grid: {self.country}, {intensity:.0f} gCO2/kWh)",
+            f"Total Cost:    {format_currency(totals['total_cost'])}",
+            f"Entries:       {format_number(totals['entries_count'])}",
         ]
+
+        if total_energy > 0:
+            summary_lines.append("")
+            summary_lines.append("Your session used about the same as:")
+            for line in best_comparisons(total_energy, count=3):
+                summary_lines.append(f"  • {line}")
+            summary_lines.append("")
+            summary_lines.append(
+                "(Energy estimates carry ~3x uncertainty. See METHODOLOGY.md.)"
+            )
 
         summary_text = Text("\n".join(summary_lines), style=self.value_style)
 
@@ -356,6 +411,7 @@ class TableViewsController:
                 for d in data
             ),
             "total_cost": sum(d["total_cost"] for d in data),
+            "total_energy_wh": sum(d.get("total_energy_wh", 0.0) for d in data),
             "entries_count": sum(d.get("entries_count", 0) for d in data),
         }
 

@@ -25,6 +25,7 @@ class AggregatedStats:
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
     cost: float = 0.0
+    energy_wh: float = 0.0
     count: int = 0
 
     def add_entry(self, entry: UsageEntry) -> None:
@@ -34,6 +35,7 @@ class AggregatedStats:
         self.cache_creation_tokens += entry.cache_creation_tokens
         self.cache_read_tokens += entry.cache_read_tokens
         self.cost += entry.cost_usd
+        self.energy_wh += entry.energy_wh
         self.count += 1
 
     def to_dict(self) -> Dict[str, Any]:
@@ -44,6 +46,7 @@ class AggregatedStats:
             "cache_creation_tokens": self.cache_creation_tokens,
             "cache_read_tokens": self.cache_read_tokens,
             "cost": self.cost,
+            "energy_wh": self.energy_wh,
             "count": self.count,
         }
 
@@ -80,6 +83,7 @@ class AggregatedPeriod:
             "cache_creation_tokens": self.stats.cache_creation_tokens,
             "cache_read_tokens": self.stats.cache_read_tokens,
             "total_cost": self.stats.cost,
+            "total_energy_wh": self.stats.energy_wh,
             "models_used": sorted(list(self.models_used)),
             "model_breakdowns": {
                 model: stats.to_dict() for model, stats in self.model_breakdowns.items()
@@ -249,6 +253,7 @@ class UsageAggregator:
             total_stats.cache_creation_tokens += data.get("cache_creation_tokens", 0)
             total_stats.cache_read_tokens += data.get("cache_read_tokens", 0)
             total_stats.cost += data.get("total_cost", 0.0)
+            total_stats.energy_wh += data.get("total_energy_wh", 0.0)
             total_stats.count += data.get("entries_count", 0)
 
         return {
@@ -263,6 +268,7 @@ class UsageAggregator:
                 + total_stats.cache_read_tokens
             ),
             "total_cost": total_stats.cost,
+            "total_energy_wh": total_stats.energy_wh,
             "entries_count": total_stats.count,
         }
 

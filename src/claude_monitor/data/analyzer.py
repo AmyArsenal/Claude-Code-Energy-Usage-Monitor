@@ -144,6 +144,7 @@ class SessionAnalyzer:
                 "cache_creation_tokens": 0,
                 "cache_read_tokens": 0,
                 "cost_usd": 0.0,
+                "energy_wh": 0.0,
                 "entries_count": 0,
             }
 
@@ -153,6 +154,7 @@ class SessionAnalyzer:
         model_stats["cache_creation_tokens"] += entry.cache_creation_tokens
         model_stats["cache_read_tokens"] += entry.cache_read_tokens
         model_stats["cost_usd"] += entry.cost_usd or 0.0
+        model_stats["energy_wh"] += entry.energy_wh or 0.0
         model_stats["entries_count"] += 1
 
         block.token_counts.input_tokens += entry.input_tokens
@@ -160,9 +162,11 @@ class SessionAnalyzer:
         block.token_counts.cache_creation_tokens += entry.cache_creation_tokens
         block.token_counts.cache_read_tokens += entry.cache_read_tokens
 
-        # Update aggregated cost (sum across all models)
+        # Update aggregated cost and energy (sum across all models)
         if entry.cost_usd:
             block.cost_usd += entry.cost_usd
+        if entry.energy_wh:
+            block.energy_wh += entry.energy_wh
 
         # Model tracking (prevent duplicates)
         if model and model not in block.models:
